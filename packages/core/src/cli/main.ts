@@ -42,6 +42,17 @@ program
   });
 
 // phantomind sync
+// phantomind learn
+program
+  .command('learn')
+  .description('Scan codebase and auto-detect tech stack, patterns, and conventions')
+  .option('-s, --sync', 'Also run sync after learning')
+  .option('-v, --verbose', 'Detailed output')
+  .action(async (options) => {
+    const { learnCommand } = await import('./learn.js');
+    await learnCommand(process.cwd(), options);
+  });
+
 program
   .command('sync')
   .description('Sync adapter configurations for AI tools')
