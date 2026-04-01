@@ -107,6 +107,11 @@ program
   .command('watch')
   .description('Watch project files and refresh learned context automatically')
   .option('-s, --sync', 'Also sync adapters after learning')
+  .option('-a, --auto', 'Fully automatic mode (learn + sync without prompting)')
+  .option('--agent', 'Show AI-suggested improvements while watching')
+  .option('--auto-apply', 'Automatically apply agent suggestions (experimental)')
+  .option('--setup', 'Setup auto-mode configuration')
+  .option('--daemon', 'Run as background daemon (experimental)')
   .action(async (options) => {
     const { watchCommand } = await import('./watch.js');
     await watchCommand(process.cwd(), options);

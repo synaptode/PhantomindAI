@@ -230,7 +230,8 @@ export async function initCommand(
     console.log(chalk2.dim(`  1. Review ${chalk2.white('.phantomind/SKILLS.md')} — auto-detected project context`));
     console.log(chalk2.dim(`  2. Run ${chalk2.white('phantomind sync')} to generate adapter configs`));
     console.log(chalk2.dim(`  3. Run ${chalk2.white('phantomind learn --sync')} anytime to re-scan & sync`));
-    console.log(chalk2.dim(`  4. ${chalk2.dim('(Optional)')} Configure provider + ${chalk2.white('.phantomind/.env')} only if you use ${chalk2.white('agent')} or ${chalk2.white('eval')}`));
+    console.log(chalk2.dim(`  4. ${chalk2.dim('(Optional)')} Enable auto-mode with ${chalk2.white('phantomind watch --setup')}`));
+    console.log(chalk2.dim(`  5. ${chalk2.dim('(Optional)')} Configure provider + ${chalk2.white('.phantomind/.env')} only if you use ${chalk2.white('agent')} or ${chalk2.white('eval')}`));
     console.log('');
   } catch (error) {
     spinner.fail('Initialization failed');
