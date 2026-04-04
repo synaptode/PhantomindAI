@@ -163,6 +163,45 @@ orchestrate:
 schema:
 	@$(MAKE) run CMD="schema $(NAME)"
 
+# ── Advanced & Diagnostics ───────────────────────────────────────────────────
+
+## troubleshoot: Run AI-powered Root Cause Analysis (RCA)
+##              Usage: make troubleshoot CMD="error in auth login"
+troubleshoot:
+	@$(MAKE) run CMD="troubleshoot --auto $(if $(CMD),--task '$(CMD)',)"
+
+## audit-arch: Run architectural audit across codebase
+audit-arch:
+	@$(MAKE) run CMD="audit --arch"
+
+## monitor: Show real-time terminal observability dashboard (TUI)
+monitor:
+	@$(MAKE) run CMD="monitor"
+
+## health: Show project health scoring and badges
+health:
+	@$(MAKE) run CMD="health"
+
+## find: Semantic code search (Free Tier)
+##       Usage: make find QUERY="database connection"
+find:
+	@$(MAKE) run CMD="find '$(QUERY)'"
+
+## fix: Run autonomous rule-based fixing (Ghost Fixer)
+##      Usage: make fix
+##             make fix DRY= (for dry-run)
+fix:
+	@$(MAKE) run CMD="fix $(if $(DRY),--dry-run,)"
+
+## snapshot: Create a context snapshot
+##           Usage: make snapshot NAME=stable-refactor
+snapshot:
+	@$(MAKE) run CMD="context --snapshot $(NAME)"
+
+## context-auto: Show auto-detected framework & feature context
+context-auto:
+	@$(MAKE) run CMD="context"
+
 # ── Project Health ───────────────────────────────────────────────────────────
 
 ## check: Full health check — typecheck + lint + test
@@ -230,6 +269,10 @@ help:
 	@echo ""
 	@echo "$(BOLD)CLI COMMANDS$(RESET)"
 	@grep -E '^## (run|run-built|init|sync|sync-force|serve|eval|validate|audit|stats|stats-learn|agent|orchestrate|schema):' $(MAKEFILE_LIST) | \
+		sed 's/^## /  /' | sed 's/:/\t/' | expand -t24
+	@echo ""
+	@echo "$(BOLD)ADVANCED & DIAGNOSTICS$(RESET)"
+	@grep -E '^## (troubleshoot|audit-arch|monitor|health|find|fix|snapshot|context-auto):' $(MAKEFILE_LIST) | \
 		sed 's/^## /  /' | sed 's/:/\t/' | expand -t24
 	@echo ""
 	@echo "$(BOLD)UTILITIES$(RESET)"

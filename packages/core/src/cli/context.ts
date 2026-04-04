@@ -1,5 +1,6 @@
 import { loadConfig } from '../config/loader.js';
 import { ContextEngine } from '../context/engine.js';
+import { ContextLearner } from '../context/learner.js';
 
 export interface ContextCommandOptions {
   file?: string;
@@ -18,6 +19,23 @@ export async function contextCommand(
   const maxTokens = options.maxTokens ? parseInt(options.maxTokens, 10) : 3000;
 
   console.log(chalk.bold.cyan('\n🧠 PhantomindAI — Context Preview\n'));
+
+  // Show Auto-detected stack
+  const learner = new ContextLearner(projectRoot);
+  await learner.load();
+  if (options.file) {
+    await learner.detectActiveFeature(undefined, [options.file]);
+  }
+  const ts = learner.getTechStack();
+  
+  if (ts.frameworks.length > 0 || ts.activeFeature) {
+    console.log(`${chalk.bold('Detected Stack:')} ${chalk.green(ts.frameworks.join(', ') || 'Standard')}`);
+    console.log(`${chalk.bold('Detected Style:')} ${chalk.yellow(ts.architectureStyle || 'Standard')}`);
+    if (ts.activeFeature) {
+       console.log(`${chalk.bold('Active Feature:')} ${chalk.magenta(ts.activeFeature)}`);
+    }
+    console.log('');
+  }
 
   if (options.search) {
     const sections = await engine.searchContext(options.search, 8);

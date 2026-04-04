@@ -11,7 +11,7 @@ import { loadConfig } from '../config/loader.js';
 export interface AuditOptions {
   period?: 'today' | 'week' | 'month' | 'all';
   format?: 'terminal' | 'markdown' | 'json';
-  type?: 'costs' | 'actions' | 'dashboard';
+  type?: 'costs' | 'actions' | 'dashboard' | 'arch';
 }
 
 export async function auditCommand(
@@ -64,6 +64,45 @@ export async function auditCommand(
       for (const entry of entries) {
         const time = new Date(entry.timestamp).toLocaleTimeString();
         console.log(`  ${chalk.dim(time)} ${chalk.cyan(entry.action)} ${chalk.dim(`by ${entry.agent}`)}`);
+      }
+    }
+
+    if (type === 'arch') {
+      const { ArchGuard } = await import('../quality/arch-guard.js');
+      const { ArchReport } = await import('./arch-report.js');
+      const glob = (await import('fast-glob')).default;
+      const { readFile } = await import('node:fs/promises');
+      const { join } = await import('node:path');
+
+      const archSpinner = ora('Scanning codebase for architectural violations...').start();
+      
+      try {
+        const files = await glob(['**/*.{ts,js,tsx,jsx}'], { 
+          cwd: projectRoot,
+          ignore: ['node_modules/**', 'dist/**', '.git/**', '.phantomind/**'] 
+        });
+
+        const archGuard = new ArchGuard();
+        const allIssues = [];
+
+        for (const file of files) {
+          const content = await readFile(join(projectRoot, file), 'utf-8');
+          const issues = archGuard.check(content, file);
+          allIssues.push(...issues);
+        }
+
+        archSpinner.stop();
+
+        if (options.format === 'json') {
+          console.log(JSON.stringify(allIssues, null, 2));
+        } else if (options.format === 'markdown') {
+          console.log(ArchReport.formatMarkdown(allIssues));
+        } else {
+          console.log(ArchReport.formatTerminal(allIssues));
+        }
+      } catch (err) {
+        archSpinner.fail('Architectural scan failed');
+        throw err;
       }
     }
 

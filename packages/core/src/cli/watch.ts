@@ -44,6 +44,32 @@ export async function watchCommand(projectRoot: string, options: WatchOptions): 
 
   const autoManager = new AutoModeManager(projectRoot);
 
+  if (options.daemon) {
+    const { spawn } = await import('node:child_process');
+    const { writeFile, mkdir } = await import('node:fs/promises');
+    
+    const logDir = join(projectRoot, '.phantomind', 'logs');
+    await mkdir(logDir, { recursive: true });
+    const logFile = join(logDir, 'watch.log');
+    
+    // Remove --daemon from args
+    const args = process.argv.slice(2).filter(a => a !== '--daemon' && a !== '-d');
+    
+    const child = spawn(process.argv[0], [process.argv[1], ...args], {
+      detached: true,
+      stdio: 'ignore',
+      cwd: projectRoot,
+    });
+
+    child.unref();
+    
+    console.log(chalk.green.bold('🚀 PhantomindAI Watcher started in background.'));
+    console.log(`${chalk.bold('PID:')} ${child.pid}`);
+    console.log(`${chalk.bold('Log:')} ${logFile}`);
+    console.log(chalk.dim('\nUse `kill <PID>` to stop the background process.'));
+    return;
+  }
+
   console.log(chalk.bold.cyan('\n👀 PhantomindAI — Watch Mode\n'));
 
   if (options.auto) {

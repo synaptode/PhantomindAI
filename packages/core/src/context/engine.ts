@@ -6,6 +6,8 @@
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { join, relative, extname, basename } from 'node:path';
 import { findProjectRoot } from '../config/index.js';
+import { ContextLearner } from './learner.js';
+import { getImplicitRules } from './implicit-rules.js';
 import type { ContextLayer, ContextOptions, ContextResult, PhantomConfig } from '../types.js';
 
 /**
@@ -63,6 +65,18 @@ export class ContextEngine {
       if (prd) layers.push(prd);
     }
 
+    // Auto-detected Framework/Feature context (Implicit Rules)
+    const autoContext = await this.getAutoContext(options);
+    if (autoContext) {
+      layers.push({
+        type: 'rules',
+        content: autoContext,
+        relevanceScore: 1.0,
+        tokenCount: this.estimateTokens(autoContext),
+        source: 'auto-detection',
+      });
+    }
+
     // Rank by relevance to current file
     if (options?.file && options?.semanticRank !== false) {
       await this.rankLayers(layers, options.file);
@@ -107,6 +121,31 @@ export class ContextEngine {
 
     scored.sort((a, b) => b.score - a.score);
     return scored.slice(0, maxResults).map(s => s.section);
+  }
+
+  /**
+   * Get auto-detected framework and feature context (Implicit Rules)
+   */
+  public async getAutoContext(options?: ContextOptions): Promise<string> {
+    const learner = new ContextLearner(this.projectRoot);
+    await learner.load();
+    
+    // In-memory feature detection
+    if (options?.file) {
+      await learner.detectActiveFeature(undefined, [options.file]);
+    }
+
+    const ts = learner.getTechStack();
+    const implicitRules = getImplicitRules(ts);
+
+    if (implicitRules.length === 0) return '';
+
+    return `## Auto-detected Framework & Context\n\n` +
+           `Detected Stack: ${ts.frameworks.join(', ') || 'Standard'}\n` +
+           `Detected Feature: ${ts.activeFeature || 'General'}\n` +
+           `Detected Style: ${ts.architectureStyle || 'Standard'}\n\n` +
+           `Implicit Rules (Follow these strictly):\n` +
+           implicitRules.join('\n');
   }
 
   /**

@@ -126,6 +126,24 @@ async function handleApiRequest(
     return;
   }
 
+  if (url.pathname === '/api/search') {
+    const query = url.searchParams.get('q') ?? '';
+    const results = await service.searchFiles(query);
+    sendJson(res, 200, results);
+    return;
+  }
+
+  if (url.pathname === '/api/context-map') {
+    const map = await service.getContextMap();
+    sendJson(res, 200, map);
+    return;
+  }
+
+  if (url.pathname === '/api/agent-status') {
+    sendJson(res, 200, await service.getAgentStatus());
+    return;
+  }
+
   sendJson(res, 404, { error: 'Unknown endpoint' });
 }
 

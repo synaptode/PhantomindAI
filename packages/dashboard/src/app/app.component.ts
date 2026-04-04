@@ -4,11 +4,13 @@ import { DashboardStore } from './dashboard.store';
 import type { CostPeriod } from '@phantomind/contracts';
 import { DashboardAuthService } from './dashboard.auth';
 import { MetricCardComponent } from './metric-card.component';
+import { ExplorerComponent } from './explorer.component';
+import { WarRoomComponent } from './war-room.component';
 
 @Component({
   selector: 'pm-root',
   standalone: true,
-  imports: [NgFor, NgIf, NgClass, MetricCardComponent],
+  imports: [NgFor, NgIf, NgClass, MetricCardComponent, ExplorerComponent, WarRoomComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -16,6 +18,7 @@ import { MetricCardComponent } from './metric-card.component';
 export class AppComponent {
   readonly store = inject(DashboardStore);
   readonly auth = inject(DashboardAuthService);
+  readonly activeTab = signal<'dashboard' | 'explorer' | 'war-room' | 'settings'>('dashboard');
   readonly showTokenInput = signal(false);
   readonly tokenDraft = signal('');
   readonly periodOptions: Array<{ label: string; value: CostPeriod }> = [

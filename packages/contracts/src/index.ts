@@ -49,3 +49,36 @@ export interface CostReport {
 }
 
 export type CostPeriod = CostReport['period'];
+
+export interface SearchResult {
+  path: string;
+  score: number;
+  snippet: string;
+  lineStart: number;
+}
+
+export interface ContextMapNode {
+  id: string;
+  label: string;
+  type: 'file' | 'module' | 'skill' | 'rule';
+  size: number;
+}
+
+export interface ContextMapEdge {
+  source: string;
+  target: string;
+  label?: string;
+  weight: number;
+}
+
+export interface ContextMap {
+  nodes: ContextMapNode[];
+  edges: ContextMapEdge[];
+}
+
+export interface AgentStatus {
+  active: boolean;
+  lastAction: string;
+  lastReasoning: string;
+  timestamp: string;
+}

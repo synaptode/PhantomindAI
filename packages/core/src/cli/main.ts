@@ -88,7 +88,19 @@ program
   .option('-s, --search <query>', 'Search context files for relevant sections')
   .option('-m, --max-tokens <tokens>', 'Maximum token budget to display')
   .option('--json', 'Output raw JSON')
+  .option('--snapshot [name]', 'Create a local context snapshot')
+  .option('--restore <name>', 'Restore a local context snapshot')
+  .option('--list', 'List all local snapshots')
   .action(async (options) => {
+    if (options.snapshot || options.restore || options.list) {
+      const { snapshotCommand } = await import('./snapshot.js');
+      await snapshotCommand(process.cwd(), {
+        name: options.snapshot || options.restore,
+        restore: !!options.restore,
+        list: !!options.list,
+      });
+      return;
+    }
     const { contextCommand } = await import('./context.js');
     await contextCommand(process.cwd(), options);
   });
@@ -170,7 +182,7 @@ program
   .description('View audit trail and analytics')
   .option('-p, --period <period>', 'Time period (today, week, month, all)', 'today')
   .option('-f, --format <format>', 'Output format (terminal, markdown, json)', 'terminal')
-  .option('-t, --type <type>', 'Report type (dashboard, costs, actions)', 'dashboard')
+  .option('-t, --type <type>', 'Report type (dashboard, costs, actions, arch)', 'dashboard')
   .action(async (options) => {
     const { auditCommand } = await import('./audit.js');
     await auditCommand(process.cwd(), options);
@@ -253,6 +265,15 @@ program
     }
   });
 
+// phantomind health
+program
+  .command('health')
+  .description('Show project health scoring and reports')
+  .action(async () => {
+    const { healthCommand } = await import('./health.js');
+    await healthCommand(process.cwd());
+  });
+
 // phantomind check
 program
   .command('check')
@@ -262,6 +283,19 @@ program
   .action(async (options) => {
     const { checkCommand } = await import('./check.js');
     await checkCommand(process.cwd(), options);
+  });
+
+// phantomind find
+program
+  .command('find <query>')
+  .description('Semantic search across codebase without API keys')
+  .option('-l, --limit <number>', 'Maximum number of results to display', '5')
+  .action(async (query, options) => {
+    const { findCommand } = await import('./find.js');
+    await findCommand(process.cwd(), query, {
+      ...options,
+      limit: parseInt(options.limit, 10),
+    });
   });
 
 // phantomind upgrade
@@ -276,11 +310,33 @@ program
 // phantomind troubleshoot
 program
   .command('troubleshoot')
-  .description('Run comprehensive diagnostics and fix suggestions')
+  .description('Run comprehensive diagnostics and AI-powered RCA')
   .option('--json', 'Output results as JSON')
+  .option('--auto', 'Run AI Root Cause Analysis (requires --symptom)')
+  .option('--symptom <text>', 'Describe the error or symptom for AI analysis')
   .action(async (options) => {
     const { troubleshootCommand } = await import('./troubleshoot.js');
     await troubleshootCommand(process.cwd(), options);
+  });
+
+program
+  .command('monitor')
+  .description('Start real-time terminal monitor (TUI)')
+  .action(async () => {
+    const { monitorCommand } = await import('./monitor.js');
+    await monitorCommand(process.cwd());
+  });
+
+// phantomind fix
+program
+  .command('fix')
+  .description('Autonomous rule-based code remediation without API keys')
+  .option('-d, --dry-run', 'Show what would change without writing', false)
+  .option('-b, --branch', 'Create a new git branch before fixing', false)
+  .option('-v, --verbose', 'Detailed output', false)
+  .action(async (options) => {
+    const { fixCommand } = await import('./fix.js');
+    await fixCommand(process.cwd(), options);
   });
 
 // phantomind tune

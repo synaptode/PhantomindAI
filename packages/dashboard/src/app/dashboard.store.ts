@@ -1,7 +1,15 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { PLATFORM_ID } from '@angular/core';
-import type { AuditEntry, CostPeriod, CostReport, DashboardMetrics } from '@phantomind/contracts';
+import type { 
+  AuditEntry, 
+  CostPeriod, 
+  CostReport, 
+  DashboardMetrics, 
+  SearchResult, 
+  ContextMap, 
+  AgentStatus 
+} from '@phantomind/contracts';
 import { DASHBOARD_API, DASHBOARD_CONFIG } from './dashboard.tokens';
 
 export type LoadState = 'idle' | 'loading' | 'error' | 'ready';
@@ -32,6 +40,9 @@ export class DashboardStore {
   readonly metrics = signal<DashboardMetrics | null>(null);
   readonly costs = signal<CostReport | null>(null);
   readonly audit = signal<AuditEntry[]>([]);
+  readonly searchResults = signal<SearchResult[]>([]);
+  readonly contextMap = signal<ContextMap | null>(null);
+  readonly agentStatus = signal<AgentStatus | null>(null);
   readonly state = signal<LoadState>('idle');
   readonly error = signal<string | null>(null);
   readonly updatedAt = signal<Date | null>(null);
@@ -157,15 +168,19 @@ export class DashboardStore {
 
     try {
       const period = this.period();
-      const [metrics, audit, costs] = await Promise.all([
+      const [metrics, audit, costs, agentStatus, contextMap] = await Promise.all([
         this.api.getMetrics(period),
         this.api.getAudit(this.config.auditLimit),
         this.api.getCosts(period),
+        this.api.getAgentStatus(),
+        this.api.getContextMap(),
       ]);
 
       this.metrics.set(metrics);
       this.audit.set(audit);
       this.costs.set(costs);
+      this.agentStatus.set(agentStatus);
+      this.contextMap.set(contextMap);
       this.updatedAt.set(new Date());
       this.state.set('ready');
     } catch (error) {
@@ -174,6 +189,12 @@ export class DashboardStore {
     } finally {
       this.refreshing = false;
     }
+  }
+
+  setPeriod(period: CostPeriod): void {
+    if (this.period() === period) return;
+    this.period.set(period);
+    void this.refresh();
   }
 
   startPolling(): void {
@@ -187,10 +208,17 @@ export class DashboardStore {
     this.destroyRef.onDestroy(() => this.stopPolling());
   }
 
-  setPeriod(period: CostPeriod): void {
-    if (this.period() === period) return;
-    this.period.set(period);
-    void this.refresh();
+  async search(query: string): Promise<void> {
+    if (!query.trim()) {
+      this.searchResults.set([]);
+      return;
+    }
+    try {
+      const results = await this.api.search(query);
+      this.searchResults.set(results);
+    } catch (error) {
+      console.error('Search failed', error);
+    }
   }
 
   stopPolling(): void {

@@ -22,8 +22,10 @@ PhantomindAI solves the **context amnesia problem**: AI assistants forget everyt
 - **Persistent context layer** — one source of truth (`SKILLS.md`, `RULES.md`, `schema.json`) synced to every AI assistant automatically
 - **Real-time automation (v0.5.0+)** — watch files, auto-learn changes, suggest improvements, and apply changes without manual commands
 - **Universal LLM abstraction** — one API for Anthropic, OpenAI, Gemini, Groq, Mistral, Ollama, DeepSeek, and OpenRouter with automatic fallback and budget routing
-- **Agentic task execution** — multi-role agent orchestration (architect, implementer, security reviewer, test writer, documenter) with human-in-the-loop checkpoints
-- **AI output quality enforcement** — secret scanning, hallucination detection, dual-model verification, consistency checking
+- **Agentic task execution** — multi-role agent orchestration (architect, implementer, security reviewer, test writer, documenter) with recursive self-healing and dual-model verification
+- **Advanced Diagnostics (NEW)** — AI-powered Root Cause Analysis (RCA), architectural integrity audits, and real-time observability monitor
+- **High-Tech Free Tier (NEW)** — Local semantic search (TF-IDF), autonomous ghost fixer, and project health gamification (no API keys required)
+- **AI output quality enforcement** — secret scanning, hallucination detection, consistency checking
 - **MCP Server** — expose project intelligence as a Model Context Protocol server for Cursor, Continue, Claude Code, and more
 - **Full observability** — cost tracking, audit trails, and analytics dashboard
 - **Multi-adapter support** — sync to GitHub Copilot, Cursor, Cline, Continue, Windsurf, Zed, Aider, Claude Code, and more
@@ -285,6 +287,53 @@ $ phantomind audit --type automation --period today
 
 ---
 
+## 🔬 Advanced Diagnostics & Self-Healing
+
+PhantomindAI v0.6.0+ transforms from a sync tool into a **self-healing development engine**.
+
+### 1. AI-Powered Root Cause Analysis (RCA)
+Stop guessing why your build failed or why your agent drifted.
+- **Command**: `phantomind troubleshoot --auto`
+- **Output**: Deep diagnostic trace identifying the exact file, line, and architectural reason for the failure.
+
+### 2. Architectural Audit (`--arch`)
+Ensure your codebase follows your rules, not just linting.
+- **Command**: `phantomind audit --arch`
+- **Utility**: Scans for structural violations (e.g., "Circular deps between features", "Improper Layer access").
+
+### 3. Recursive Self-Healing Loop
+When the agent writes code, it doesn't just "hope" it works. It runs a recursive verification loop:
+1. **Architectural Guard**: Checks if the new code violates structure.
+2. **Hallucination Guard**: Checks if the new code references non-existent files/types.
+3. **Critic Review**: (Optional) A second model reviews the code for quality.
+4. **Auto-Correction**: If any check fails, the agent **self-corrects** before ever showing you the code.
+
+---
+
+## 💎 High-Tech Free Tier
+
+We believe advanced dev tools should be accessible. The following features are **100% Free, Offline-First, and require Zero API Keys**:
+
+### 1. Semantic Code Explorer (`find`)
+Search your codebase by meaning using a local TF-IDF vector engine.
+- **Example**: `phantomind find "logic for token expiration"`
+- **Benefit**: Faster than grep, smarter than simple keyword search.
+
+### 2. Autonomous Ghost Fixer (`fix`)
+Automatically fix architectural violations using predefined rule templates.
+- **Example**: `phantomind fix --branch`
+- **Safety**: Automatically creates a git branch for the proposed fixes.
+
+### 3. Project Health Scoring (`health`)
+Gamify your project quality with real-time scoring and badges.
+- **Command**: `phantomind health`
+- **Badges**: Iron Shield (Security), Clean Architect (Structure), Style Master (Consistency).
+
+---
+```
+
+---
+
 ## CLI Reference
 
 ```
@@ -308,10 +357,14 @@ phantomind [command] [options]
 | `phantomind dashboard` | Start the observability dashboard server | |
 | `phantomind eval` | Test and benchmark LLM provider connections | |
 | `phantomind validate [files...]` | Scan code for secrets, hallucinations, and consistency issues | |
-| `phantomind audit` | View cost reports, automation activity, and audit trail | |
-| `phantomind stats` | Display project context statistics | |
-| `phantomind agent <task>` | Execute an agentic task from the CLI | |
-| `phantomind schema [name]` | List or display schema definitions | |
+| `phantomind troubleshot` | **NEW**: AI-powered Root Cause Analysis (RCA) | ✓ |
+| `phantomind audit --arch` | **NEW**: Run architectural integrity audit | ✓ |
+| `phantomind monitor` | **NEW**: Live terminal observability monitor (TUI) | ✓ |
+| `phantomind find` | **NEW**: Semantic code search (Local/Free) | ✓ |
+| `phantomind fix` | **NEW**: Autonomous ghost fixer | ✓ |
+| `phantomind health` | **NEW**: Project health scoring & badges | ✓ |
+| `phantomind context --snapshot` | **NEW**: Save/Restore context snapshots | ✓ |
+| `phantomind context` | **NEW**: Detect auto-framework & implicit rules | ✓ |
 | `phantomind check` | Run pre-flight doctor: verify setup, adapters, provider & security | |
 | `phantomind upgrade` | Self-update to the latest published version | |
 

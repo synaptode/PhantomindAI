@@ -1,7 +1,15 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import type { AuditEntry, CostPeriod, CostReport, DashboardMetrics } from '@phantomind/contracts';
+import type { 
+  AuditEntry, 
+  CostPeriod, 
+  CostReport, 
+  DashboardMetrics, 
+  SearchResult, 
+  ContextMap, 
+  AgentStatus 
+} from '@phantomind/contracts';
 import { DASHBOARD_CONFIG, type DashboardApi } from './dashboard.tokens';
 import { DashboardAuthService } from './dashboard.auth';
 
@@ -33,6 +41,31 @@ export class HttpDashboardApi implements DashboardApi {
     return firstValueFrom(
       this.http.get<CostReport>(`${this.baseUrl()}/api/costs`, {
         params: { period },
+        headers: this.buildHeaders(),
+      }),
+    );
+  }
+
+  search(query: string): Promise<SearchResult[]> {
+    return firstValueFrom(
+      this.http.get<SearchResult[]>(`${this.baseUrl()}/api/search`, {
+        params: { q: query },
+        headers: this.buildHeaders(),
+      }),
+    );
+  }
+
+  getContextMap(): Promise<ContextMap> {
+    return firstValueFrom(
+      this.http.get<ContextMap>(`${this.baseUrl()}/api/context-map`, {
+        headers: this.buildHeaders(),
+      }),
+    );
+  }
+
+  getAgentStatus(): Promise<AgentStatus> {
+    return firstValueFrom(
+      this.http.get<AgentStatus>(`${this.baseUrl()}/api/agent-status`, {
         headers: this.buildHeaders(),
       }),
     );

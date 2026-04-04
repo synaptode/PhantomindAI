@@ -6,11 +6,13 @@
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'eventemitter3';
 import type { ProviderRouter } from '../providers/router.js';
-import type { ContextEngine } from '../context/engine.js';
+import { ContextEngine } from '../context/engine.js';
+import { ContextLearner } from '../context/learner.js';
 import { AnomalyDetector } from '../quality/anomaly.js';
 import { SecretScanner } from '../quality/secret-scanner.js';
 import { HallucinationGuard } from '../quality/hallucination-guard.js';
 import { DualVerifier } from '../quality/dual-verifier.js';
+import { ArchGuard } from '../quality/arch-guard.js';
 import type {
   AgentConfig,
   AgentRole,
@@ -36,6 +38,7 @@ export class AgentExecutor extends EventEmitter {
   private secretScanner: SecretScanner;
   private hallucinationGuard: HallucinationGuard;
   private dualVerifier?: DualVerifier;
+  private archGuard: ArchGuard;
   private projectRoot: string;
   private config: AgentConfig;
   private checkpointHandler?: CheckpointHandler;
@@ -55,6 +58,7 @@ export class AgentExecutor extends EventEmitter {
     this.anomalyDetector = new AnomalyDetector();
     this.secretScanner = new SecretScanner();
     this.hallucinationGuard = new HallucinationGuard(projectRoot);
+    this.archGuard = new ArchGuard();
     if (phantomConfig?.quality?.dualVerification) {
       this.dualVerifier = new DualVerifier(router, contextEngine, phantomConfig);
     }
@@ -89,6 +93,10 @@ export class AgentExecutor extends EventEmitter {
 
     try {
       // Get project context
+      const learner = new ContextLearner(this.projectRoot);
+      await learner.load();
+      await learner.detectActiveFeature(description);
+
       const context = await this.contextEngine.getProjectContext({ maxTokens: 3000 });
       const contextText = context.layers.map(l => l.content).join('\n\n');
 
@@ -191,40 +199,93 @@ Provide the output for this step. If writing code, provide the full file content
           });
 
           this.addUsage(totalUsage, stepResponse.usage);
-          step.output = stepResponse.content;
-          step.tokenUsage = stepResponse.usage;
+          let currentContent = stepResponse.content;
+          
+          // Self-Healing Loop for code generation
+          if (planItem.action === 'write_file') {
+            let attempts = 0;
+            const maxHealingAttempts = 2;
+            let healingNeeded = true;
+
+            while (healingNeeded && attempts < maxHealingAttempts) {
+              const archIssues = this.archGuard.check(currentContent, planItem.target);
+              const hallucinations = await this.hallucinationGuard.check(currentContent, planItem.target);
+              
+              // If basic guards fail, fix immediately
+              if (archIssues.length > 0 || hallucinations.length > 0) {
+                attempts++;
+                this.emit('agent:step', { 
+                  task, 
+                  step: { ...step, action: 'healing', input: { attempt: attempts, type: 'basic-guard', issues: archIssues.length + hallucinations.length } } 
+                });
+
+                const fixResponse = await this.router.complete({
+                  systemPrompt,
+                  prompt: `The following content for "${planItem.target}" has quality issues that must be fixed.
+                  
+                  ISSUES FOUND:
+                  ${archIssues.map(i => `- [ARCH][${i.severity}] ${i.description}`).join('\n')}
+                  ${hallucinations.map(h => `- [HALLUCINATION][error] ${h.type} "${h.reference}" does not exist at ${h.file}:${h.line}`).join('\n')}
+                  
+                  Please provide the ENTIRE corrected file content.`,
+                  temperature: 0.1,
+                });
+
+                currentContent = fixResponse.content;
+                this.addUsage(totalUsage, fixResponse.usage);
+                continue;
+              }
+
+              // If basic guards pass, try Dual-model verification (Critic)
+              if (this.dualVerifier) {
+                const verification = await this.dualVerifier.verify(
+                  currentContent,
+                  description,
+                  planItem.target,
+                );
+                this.emit('quality:dual-verification', { step, verification });
+
+                if (!verification.approved) {
+                  attempts++;
+                  this.emit('agent:step', { 
+                    task, 
+                    step: { ...step, action: 'healing', input: { attempt: attempts, type: 'critic-review', issues: verification.issues.length } } 
+                  });
+
+                  const fixResponse = await this.router.complete({
+                    systemPrompt,
+                    prompt: `The following content for "${planItem.target}" was REJECTED by an independent reviewer.
+                    
+                    CRITIC FEEDBACK:
+                    ${verification.issues.map(i => `- [${i.severity}][${i.category}] ${i.description} (Suggestion: ${i.suggestion})`).join('\n')}
+                    
+                    Please provide the ENTIRE corrected file content addressing all critic feedback.`,
+                    temperature: 0.1,
+                  });
+
+                  currentContent = fixResponse.content;
+                  this.addUsage(totalUsage, fixResponse.usage);
+                  continue;
+                }
+              }
+
+              // All checks passed
+              healingNeeded = false;
+            }
+
+            // Final Metadata & reporting
+            filesChanged.push(planItem.target);
+            const secrets = this.secretScanner.scan(currentContent, planItem.target);
+            if (secrets.length > 0) this.emit('quality:secret-detected', { step, secrets });
+            
+            const finalArchIssues = this.archGuard.check(currentContent, planItem.target);
+            if (finalArchIssues.length > 0) this.emit('quality:arch-violation', { step, issues: finalArchIssues });
+          }
+
+          step.output = currentContent;
+          step.tokenUsage = step.tokenUsage || stepResponse.usage;
           step.status = 'completed';
           step.completedAt = new Date().toISOString();
-
-          // Quality checks on output
-          if (planItem.action === 'write_file') {
-            filesChanged.push(planItem.target);
-
-            // Secret scan
-            const secrets = this.secretScanner.scan(stepResponse.content, planItem.target);
-            if (secrets.length > 0) {
-              this.emit('quality:secret-detected', { step, secrets });
-            }
-
-            // Hallucination check
-            const hallucinations = await this.hallucinationGuard.check(
-              stepResponse.content,
-              planItem.target,
-            );
-            if (hallucinations.length > 0) {
-              this.emit('quality:hallucination-detected', { step, hallucinations });
-            }
-
-            // Dual-model verification
-            if (this.dualVerifier) {
-              const verification = await this.dualVerifier.verify(
-                stepResponse.content,
-                description,
-                planItem.target,
-              );
-              this.emit('quality:dual-verification', { step, verification });
-            }
-          }
 
           // Record action for anomaly detection
           this.anomalyDetector.recordAction(

@@ -1,10 +1,9 @@
-/**
- * PhantomindAI — Troubleshoot Command
- * Comprehensive diagnostic tool for common issues and remediation suggestions
- */
-
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { loadConfig } from '../config/loader.js';
+import { ProviderRouter } from '../providers/router.js';
+import { ContextEngine } from '../context/engine.js';
+import { DiagnoserAgent } from '../quality/diagnoser.js';
 
 export interface TroubleshootCheck {
   name: string;
@@ -13,13 +12,68 @@ export interface TroubleshootCheck {
   remediation?: string[];
 }
 
-export async function troubleshootCommand(projectRoot: string, options: { json?: boolean } = {}): Promise<void> {
+export interface TroubleshootOptions {
+  json?: boolean;
+  auto?: boolean;
+  symptom?: string;
+}
+
+export async function troubleshootCommand(projectRoot: string, options: TroubleshootOptions = {}): Promise<void> {
   const chalk = (await import('chalk')).default;
   const ora = (await import('ora')).default;
 
   console.log(chalk.bold.cyan('\n🔍 PhantomindAI — Troubleshoot\n'));
 
-  const spinner = ora('Running diagnostics...').start();
+  if (options.auto && options.symptom) {
+    const aiSpinner = ora('Performing AI Root Cause Analysis...').start();
+    try {
+      const config = await loadConfig(projectRoot);
+      const router = new ProviderRouter(config.providers, config.budget);
+      const contextEngine = new ContextEngine(config, projectRoot);
+      const diagnoser = new DiagnoserAgent(router, contextEngine, config);
+
+      // Advanced: Pull recent observability context for diagnosis
+      const { AuditTrail } = await import('../observability/audit.js');
+      const auditTrail = new AuditTrail(projectRoot);
+      await auditTrail.loadFromDisk();
+      const recentActions = auditTrail.getRecent(10);
+      
+      const symptomWithContext = `${options.symptom}\n\n## Recent Audit Trace\n${recentActions.map(a => `- ${a.timestamp}: ${a.action} (${a.agent}) ${a.error ? `ERR: ${a.error}` : ''}`).join('\n')}`;
+
+      const result = await diagnoser.diagnose(symptomWithContext);
+      aiSpinner.succeed('AI Analysis Complete\n');
+
+      const severityColor = result.severity === 'critical' ? chalk.red.bold 
+        : result.severity === 'high' ? chalk.red 
+        : result.severity === 'medium' ? chalk.yellow 
+        : chalk.blue;
+
+      console.log(chalk.bold.underline('AI Root Cause Analysis:'));
+      console.log(`${chalk.bold('Root Cause:')} ${result.rootCause}`);
+      console.log(`${chalk.bold('Severity:')} ${severityColor(result.severity.toUpperCase())} (Confidence: ${(result.confidence * 100).toFixed(0)}%)`);
+      console.log(`${chalk.bold('Impact:')} ${result.impact}`);
+      
+      if (result.filesInvolved.length > 0) {
+        console.log(`${chalk.bold('Files Involved:')}`);
+        result.filesInvolved.forEach(f => console.log(`  • ${chalk.dim(f)}`));
+      }
+
+      console.log(`\n${chalk.bold.green('Suggested Remediation:')}`);
+      console.log(result.remediation);
+
+      if (result.suggestedCommand) {
+        console.log(`\n${chalk.bold('To fix this, try running:')}`);
+        console.log(chalk.bgBlack.white(`  $ ${result.suggestedCommand}  `));
+      }
+
+      console.log('\n' + chalk.dim('─'.repeat(50)) + '\n');
+    } catch (error) {
+      aiSpinner.fail('AI Analysis failed');
+      console.error(chalk.red((error as Error).message));
+    }
+  }
+
+  const spinner = ora('Running system diagnostics...').start();
 
   try {
     const checks: TroubleshootCheck[] = [];

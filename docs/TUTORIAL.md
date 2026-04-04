@@ -20,7 +20,11 @@ Panduan langkah demi langkah untuk menggunakan PhantomindAI dari nol hingga mahi
 12. [Schema Registry](#12-schema-registry)
 13. [Workflow Tim](#13-workflow-tim)
 14. [Tips & Trik](#14-tips--trik)
-15. [Troubleshooting](#15-troubleshooting)
+15. [Troubleshooting Dasar](#15-troubleshooting-dasar)
+16. [Diagnostik Lanjut & AI-RCA](#16-diagnostik-lanjut--ai-rca)
+17. [Kesehatan Proyek & Self-Healing](#17-kesehatan-proyek--self-healing)
+18. [Kecerdasan Tanpa Biaya (Free Tier)](#18-kecerdasan-tanpa-biaya-free-tier)
+19. [Monitoring Lanjut & Snapshots](#19-monitoring-lanjut--snapshots)
 
 ---
 
@@ -1327,6 +1331,135 @@ await phantom.save();
 ```bash
 # Export data audit dalam format JSON untuk debugging
 npx phantomind audit --format json | jq '.entries | last(5)'
+```
+
+---
+
+## 15. Troubleshooting Dasar
+
+Jika Anda menemui kendala koneksi atau konfigurasi... (konten lama)
+
+---
+
+## 16. Diagnostik Lanjut & AI-RCA
+
+PhantomindAI v0.6.0 memperkenalkan sistem diagnostik otonom untuk membantu Anda memahami kegagalan secara mendalam.
+
+### 16.1 Root Cause Analysis (RCA) Otomatis
+
+Gunakan perintah `troubleshoot` dengan flag `--auto` untuk meminta AI menganalisis kegagalan fitur atau build.
+
+```bash
+# Biarkan AI menganalisis apa yang salah dengan login flow
+phantomind troubleshoot --auto --task "perbaiki error 500 di endpoint /login"
+```
+
+AI akan:
+1.  Membaca log terbaru dari `.phantomind/logs/`.
+2.  Menganalisis file pedukung (dependencies).
+3.  Memberikan laporan **RCA** yang merujuk pada file dan baris kode yang tepat.
+
+### 16.2 Audit Arsitektur
+
+Audit arsitektur memastikan struktur kode Anda tetap konsisten dengan aturan yang Anda definisikan di `RULES.md`.
+
+```bash
+phantomind audit --arch
+```
+
+Sistem akan mencari deteksi seperti:
+-   Kebocoran layer (misal: Service memanggil Controller).
+-   Dependency melingkar antar modul fitur.
+-   Ketidaksesuaian pola folder yang dilarang.
+
+---
+
+## 17. Kesehatan Proyek & Self-Healing
+
+Menjaga kualitas kode secara proaktif.
+
+### 17.1 Dashboard Kesehatan (`health`)
+
+Ingin tahu seberapa "sehat" proyek Anda di mata AI?
+
+```bash
+phantomind health
+```
+
+Skor ini dihitung berdasarkan:
+-   Jumlah pelanggaran arsitektur.
+-   Kerapihan penamaan (konsistensi).
+-   Keamanan (ada secrets atau tidak).
+
+Dapatkan badge seperti **Iron Shield** atau **Clean Architect** sebagai bukti kualitas codebase Anda.
+
+### 17.2 Ghost Fixer (`fix`)
+
+Dapatkan perbaikan otomatis untuk pelanggaran arsitektur ringan tanpa perlu campur tangan manual.
+
+```bash
+# Lihat perbaikan yang disarankan
+phantomind fix --dry-run
+
+# Terapkan perbaikan di branch baru (aman!)
+phantomind fix --branch
+```
+
+Sistem akan menerapkan regex perbaikan yang telah ditentukan di `ArchGuard` untuk merapikan kode Anda seketika.
+
+---
+
+## 18. Kecerdasan Tanpa Biaya (Free Tier)
+
+Fitur-fitur ini berjalan sepenuhnya secara lokal menggunakan mesin **TF-IDF** dan **Rule-based**, sehingga Anda tidak butuh API Key atau biaya token.
+
+### 18.1 Semantic Search (`find`)
+
+Lupakan `grep` atau `ctrl+f` biasa. Cari kode berdasarkan fungsinya.
+
+```bash
+phantomind find "logika pengecekan masa berlaku token"
+```
+
+PhantomindAI akan memberikan daftar file yang paling relevan secara semantik beserta cuplikan kodenya.
+
+### 18.2 Deteksi Konteks Otomatis
+
+PhantomindAI kini secara otomatis mendeteksi framework yang Anda gunakan saat menjalankan perintah `context`.
+
+```bash
+phantomind context
+```
+
+Output akan menunjukkan:
+-   **Detected Stack**: (misal: Next.js + Tailwind)
+-   **Architecture Style**: (misal: Feature-based)
+-   **Active Feature**: Apa yang sedang Anda kerjakan saat ini.
+
+---
+
+## 19. Monitoring Lanjut & Snapshots
+
+### 19.1 Watcher sebagai Daemon
+
+Anda bisa menjalankan watcher di latar belakang agar tidak memenuhi terminal aktif Anda.
+
+```bash
+phantomind watch --auto --daemon
+```
+
+Log aktivitas akan tersedia di `.phantomind/logs/watch.log`. Gunakan kombinasi `tail -f` untuk memantau aktivitasnya jika perlu.
+
+### 19.2 Context Snapshots
+
+Amankan "keadaan pikiran" AI Anda. Sebelum melakukan refactoring besar, ambil snapshot dari konteks project saat ini.
+
+```bash
+# Simpan snapshot
+phantomind context --snapshot "sebelum-refactor-auth"
+
+# Pulihkan jika terjadi kekacauan
+phantomind context --restore "sebelum-refactor-auth"
 ```
 
 ---

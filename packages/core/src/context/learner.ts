@@ -39,6 +39,10 @@ export interface TechStackInfo {
   formLibraries: string[];
   stateManagement: string[];
   a11yLibraries: string[];
+  // Context Awareness
+  architectureStyle?: 'Monorepo' | 'Clean Architecture' | 'Layered' | 'Feature-based' | 'Modular' | 'Unknown';
+  activeFeature?: string;
+  frameworkVersion?: string;
 }
 
 interface LearningState {
@@ -188,9 +192,64 @@ export class ContextLearner {
     // Merge with existing patterns
     this.mergePatterns(newPatterns);
     this.state.lastScanTimestamp = now;
+    
+    // Auto-detect architecture style
+    this.state.techStack.architectureStyle = this.detectArchitectureStyle(structurePatterns);
+
     await this.save();
 
     return this.state.patterns;
+  }
+
+  /**
+   * Detect current feature being worked on based on task and recent changes
+   */
+  public async detectActiveFeature(taskDescription?: string, filesChanged: string[] = []): Promise<string | undefined> {
+    const keywords: string[] = [];
+    
+    if (taskDescription) {
+      keywords.push(...taskDescription.toLowerCase().match(/\b\w{3,}\b/g) ?? []);
+    }
+
+    if (filesChanged.length > 0) {
+      for (const file of filesChanged) {
+        const parts = file.split('/');
+        // Typical feature paths: features/auth/..., src/modules/users/..., domains/orders/...
+        const featureIndex = parts.findIndex(p => ['features', 'modules', 'domains', 'pages', 'apps', 'packages'].includes(p));
+        if (featureIndex !== -1 && parts[featureIndex + 1]) {
+          keywords.push(parts[featureIndex + 1]);
+        }
+      }
+    }
+
+    if (keywords.length === 0) return undefined;
+
+    // Count frequency
+    const counts: Record<string, number> = {};
+    for (const k of keywords) {
+      if (['add', 'fix', 'create', 'update', 'feature', 'refactor'].includes(k)) continue;
+      counts[k] = (counts[k] ?? 0) + 1;
+    }
+
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    this.state.techStack.activeFeature = sorted[0]?.[0];
+    return this.state.techStack.activeFeature;
+  }
+
+  private detectArchitectureStyle(structure: Map<string, string[]>): TechStackInfo['architectureStyle'] {
+    if (this.state.techStack.projectType === 'Monorepo') return 'Monorepo';
+    
+    let layeredCount = 0;
+    let featureCount = 0;
+
+    for (const pattern of structure.keys()) {
+      if (pattern.includes('Layer-based')) layeredCount++;
+      if (pattern.includes('Feature-based')) featureCount++;
+    }
+
+    if (featureCount > layeredCount) return 'Feature-based';
+    if (layeredCount > 0) return 'Layered';
+    return 'Unknown';
   }
 
   /**
@@ -353,6 +412,12 @@ export class ContextLearner {
         if (allDeps['astro']) ts.frameworks.push('Astro');
         if (allDeps['remix'] || allDeps['@remix-run/node']) ts.frameworks.push('Remix');
         if (allDeps['electron']) ts.frameworks.push('Electron');
+
+        // Detailed Framework versions/styles
+        if (allDeps['next']) {
+          if (existsSync(join(this.projectRoot, 'app'))) ts.architectureStyle = 'Feature-based'; // Next.js App Router
+          else if (existsSync(join(this.projectRoot, 'pages'))) ts.architectureStyle = 'Layered'; // Next.js Pages Router
+        }
 
         // Build tools
         if (allDeps['vite']) ts.buildTools.push('Vite');

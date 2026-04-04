@@ -1,142 +1,195 @@
-<div class="page">
-  <header class="page-header">
-    <div class="title">
-      <p class="eyebrow">PhantomindAI</p>
-      <h1>Observability Dashboard</h1>
-      <p class="subtitle">Telemetry for providers, quality gates, and agent throughput.</p>
+<div class="layout">
+  <aside class="sidebar glass">
+    <div class="sidebar-header">
+      <div class="logo">🔮</div>
+      <div class="brand">
+        <span class="brand-name">PhantomindAI</span>
+        <span class="brand-tag">Premium v0.5.0</span>
+      </div>
     </div>
-    <div class="status-panel" [ngClass]="store.state()">
-      <div class="status-pill">{{ statusLabel() }}</div>
-      <div class="status-hint">{{ statusHint() }}</div>
-      <div class="token-row">
-        <span class="token-status">{{ tokenStatus() }}</span>
-        <button type="button" class="token-toggle" (click)="toggleTokenInput()">
-          {{ showTokenInput() ? 'Hide' : 'Token' }}
+
+    <nav class="nav-links">
+      <button 
+        class="nav-btn" 
+        [class.active]="activeTab() === 'dashboard'" 
+        (click)="activeTab.set('dashboard')"
+      >
+        <span class="icon">📊</span>
+        <span class="label">Dashboard</span>
+      </button>
+      <button 
+        class="nav-btn" 
+        [class.active]="activeTab() === 'explorer'" 
+        (click)="activeTab.set('explorer')"
+      >
+        <span class="icon">🔍</span>
+        <span class="label">Explorer</span>
+      </button>
+      <button 
+        class="nav-btn" 
+        [class.active]="activeTab() === 'war-room'" 
+        (click)="activeTab.set('war-room')"
+      >
+        <span class="icon">🤖</span>
+        <span class="label">War Room</span>
+      </button>
+      <button 
+        class="nav-btn" 
+        [class.active]="activeTab() === 'settings'" 
+        (click)="activeTab.set('settings')"
+      >
+        <span class="icon">⚙️</span>
+        <span class="label">Settings</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="status-indicator" [ngClass]="store.state()">
+        <span class="pulse"></span>
+        <span class="label">{{ statusLabel() }}</span>
+      </div>
+      <div class="update-time">{{ statusHint() }}</div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="content-header">
+      <div class="header-titles">
+        <h1 *ngIf="activeTab() === 'dashboard'">Analytics Dashboard</h1>
+        <h1 *ngIf="activeTab() === 'explorer'">Context Explorer</h1>
+        <h1 *ngIf="activeTab() === 'war-room'">Agent War Room</h1>
+        <h1 *ngIf="activeTab() === 'settings'">Configuration</h1>
+        <p class="subtitle" *ngIf="activeTab() === 'dashboard'">Telemetry for providers, quality gates, and agent throughput.</p>
+        <p class="subtitle" *ngIf="activeTab() === 'explorer'">Semantic search across your project's learned context.</p>
+        <p class="subtitle" *ngIf="activeTab() === 'war-room'">Live agent status and knowledge relationship monitoring.</p>
+      </div>
+
+      <div class="header-actions">
+        <div class="period-toggle glass" *ngIf="activeTab() === 'dashboard'">
+          <button
+            *ngFor="let option of periodOptions; trackBy: trackByLabel"
+            type="button"
+            [class.active]="store.period() === option.value"
+            (click)="onPeriodSelect(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+        <button class="refresh-btn gradient-btn" type="button" (click)="onRefresh()">
+          <span class="icon">🔄</span>
+          <span>Refresh</span>
         </button>
       </div>
-      <div class="token-input" *ngIf="showTokenInput()">
-        <input
-          type="password"
-          [value]="tokenDraft()"
-          (input)="onTokenInput(($event.target as HTMLInputElement).value)"
-          placeholder="Paste API token"
-        />
-        <button type="button" class="token-save" (click)="saveToken()">Save</button>
-        <button type="button" class="token-clear" *ngIf="auth.token()" (click)="clearToken()">Clear</button>
-      </div>
-      <div class="period-toggle">
-        <button
-          *ngFor="let option of periodOptions; trackBy: trackByLabel"
-          type="button"
-          [class.active]="store.period() === option.value"
-          (click)="onPeriodSelect(option.value)"
-        >
-          {{ option.label }}
-        </button>
-      </div>
-      <button class="refresh" type="button" (click)="onRefresh()">Refresh</button>
-    </div>
-  </header>
+    </header>
 
-  <section class="grid grid--overview">
-    <pm-metric-card
-      *ngFor="let tile of store.overviewTiles(); let i = index; trackBy: trackByLabel"
-      [label]="tile.label"
-      [value]="tile.value"
-      [hint]="tile.hint"
-      [tone]="tile.tone || 'neutral'"
-      [delay]="i * 70"
-    ></pm-metric-card>
-  </section>
+    <div class="view-container">
+      <!-- Dashboard View -->
+      <div *ngIf="activeTab() === 'dashboard'" class="dashboard-view animate-fade">
+        <section class="metrics-grid">
+          <pm-metric-card
+            *ngFor="let tile of store.overviewTiles(); let i = index; trackBy: trackByLabel"
+            [label]="tile.label"
+            [value]="tile.value"
+            [hint]="tile.hint"
+            [tone]="tile.tone || 'neutral'"
+            [delay]="i * 70"
+          ></pm-metric-card>
+        </section>
 
-  <section class="grid grid--split">
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Performance</h2>
-        <p>Latency and reliability across providers.</p>
-      </div>
-      <div class="grid grid--panel">
-        <pm-metric-card
-          *ngFor="let tile of store.performanceTiles(); let i = index; trackBy: trackByLabel"
-          [label]="tile.label"
-          [value]="tile.value"
-          [hint]="tile.hint"
-          [tone]="tile.tone || 'neutral'"
-          [delay]="i * 70"
-        ></pm-metric-card>
-      </div>
-      <div class="chip-row" *ngIf="store.providerChips().length">
-        <span class="chip" *ngFor="let provider of store.providerChips(); trackBy: trackByString">
-          {{ provider }}
-        </span>
-      </div>
-    </div>
+        <div class="split-grid">
+          <div class="panel glass">
+            <div class="panel-header">
+              <h2>Performance</h2>
+              <div class="provider-chips">
+                <span class="chip" *ngFor="let provider of store.providerChips(); trackBy: trackByString">
+                  {{ provider }}
+                </span>
+              </div>
+            </div>
+            <div class="panel-metrics">
+              <pm-metric-card
+                *ngFor="let tile of store.performanceTiles(); let i = index; trackBy: trackByLabel"
+                [label]="tile.label"
+                [value]="tile.value"
+                [hint]="tile.hint"
+                [tone]="tile.tone || 'neutral'"
+                [delay]="i * 70"
+              ></pm-metric-card>
+            </div>
+          </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Quality Signals</h2>
-        <p>Guardrail events and consistency checks.</p>
-      </div>
-      <div class="grid grid--panel">
-        <pm-metric-card
-          *ngFor="let tile of store.qualityTiles(); let i = index; trackBy: trackByLabel"
-          [label]="tile.label"
-          [value]="tile.value"
-          [hint]="tile.hint"
-          [tone]="tile.tone || 'neutral'"
-          [delay]="i * 70"
-        ></pm-metric-card>
-      </div>
-    </div>
-  </section>
-
-  <section class="grid grid--split">
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Agents</h2>
-        <p>Task throughput and error rates.</p>
-      </div>
-      <div class="grid grid--panel">
-        <pm-metric-card
-          *ngFor="let tile of store.agentTiles(); let i = index; trackBy: trackByLabel"
-          [label]="tile.label"
-          [value]="tile.value"
-          [hint]="tile.hint"
-          [tone]="tile.tone || 'neutral'"
-          [delay]="i * 70"
-        ></pm-metric-card>
-      </div>
-      <div class="budget" *ngIf="store.costs() as costs">
-        <div class="budget-title">Budget Remaining</div>
-        <div class="budget-value">
-          {{ costs.budgetRemaining !== undefined ? ('$' + costs.budgetRemaining.toFixed(2)) : 'Not Set' }}
+          <div class="panel glass">
+            <div class="panel-header">
+              <h2>Quality Signals</h2>
+            </div>
+            <div class="panel-metrics">
+              <pm-metric-card
+                *ngFor="let tile of store.qualityTiles(); let i = index; trackBy: trackByLabel"
+                [label]="tile.label"
+                [value]="tile.value"
+                [hint]="tile.hint"
+                [tone]="tile.tone || 'neutral'"
+                [delay]="i * 70"
+              ></pm-metric-card>
+            </div>
+          </div>
         </div>
-        <div class="budget-hint">Period: {{ costs.period }}</div>
-      </div>
-    </div>
 
-    <div class="panel audit">
-      <div class="panel-header">
-        <h2>Recent Actions</h2>
-        <p>Latest recorded system events.</p>
+        <section class="audit-section glass">
+          <div class="panel-header">
+            <h2>Recent Actions</h2>
+          </div>
+          <div class="audit-list" *ngIf="store.auditItems().length; else emptyAudit">
+            <div class="audit-row" *ngFor="let item of store.auditItems(); trackBy: trackById">
+              <span class="audit-time">{{ item.time }}</span>
+              <span class="audit-action">{{ item.action }}</span>
+              <span class="audit-agent">{{ item.agent }}</span>
+            </div>
+          </div>
+          <ng-template #emptyAudit>
+            <div class="empty">No audit entries yet.</div>
+          </ng-template>
+        </section>
       </div>
-      <div class="audit-list" *ngIf="store.auditItems().length; else emptyAudit">
-        <div
-          class="audit-row"
-          *ngFor="let item of store.auditItems(); trackBy: trackById"
-        >
-          <span class="audit-time">{{ item.time }}</span>
-          <span class="audit-action">{{ item.action }}</span>
-          <span class="audit-agent">{{ item.agent }}</span>
+
+      <!-- Explorer View -->
+      <pm-explorer *ngIf="activeTab() === 'explorer'"></pm-explorer>
+
+      <!-- War Room View -->
+      <pm-war-room *ngIf="activeTab() === 'war-room'"></pm-war-room>
+
+      <!-- Settings View -->
+      <div *ngIf="activeTab() === 'settings'" class="settings-view glass animate-fade">
+        <div class="setting-group">
+          <label>API Auth Token</label>
+          <div class="token-control">
+            <input 
+              [type]="showTokenInput() ? 'text' : 'password'" 
+              [value]="tokenDraft()" 
+              (input)="onTokenInput($any($event.target).value)"
+              placeholder="Paste your dashboard API token"
+            />
+            <button class="icon-toggle" (click)="toggleTokenInput()">👁️</button>
+            <button class="save-btn" (click)="saveToken()">Save</button>
+            <button class="clear-btn" *ngIf="auth.token()" (click)="clearToken()">Clear</button>
+          </div>
+          <p class="hint">Ensure this token matches the one set via CLI or Environment Variable.</p>
+        </div>
+
+        <div class="setting-group">
+          <label>Advanced Quality Gates</label>
+          <div class="toggle-row">
+            <span>Dual-Model Verification</span>
+            <div class="switch disabled">OFF</div>
+          </div>
+          <p class="hint">Increases accuracy by running two independent validation cycles (v0.5.1+).</p>
         </div>
       </div>
-      <ng-template #emptyAudit>
-        <div class="empty">No audit entries yet.</div>
-      </ng-template>
     </div>
-  </section>
+  </main>
 
-  <div class="error" *ngIf="store.error()">
-    {{ store.error() }}
+  <div class="error-toast" *ngIf="store.error()">
+    <span class="icon">⚠️</span>
+    <span class="message">{{ store.error() }}</span>
   </div>
 </div>
